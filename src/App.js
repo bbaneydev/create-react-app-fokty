@@ -1,50 +1,64 @@
-import React, { Component } from "react"
-import logo from "./logo.svg"
-import "./App.css"
+import React, { useState, useEffect } from 'react'
+import './App.css';
+import LandingPage from './components/LandingPage';
+import Recipes from './components/Recipes';
+import RecipeDetails from './components/RecipeDetails';
+import Navbar from './components/Navbar'
+import Reviews from './components/Reviews'
+import AddReview from './components/AddReview';
+import {Switch, Route} from 'react-router-dom'
 
-class LambdaDemo extends Component {
-  constructor(props) {
-    super(props)
-    this.state = { loading: false, msg: null }
-  }
+function App() {
+  const [recipes, setRecipes] = useState([])
+  const [search, setSearch] = useState('')
+  const [ issueRequest, setIssueRequest ] = useState(false)
 
-  handleClick = api => e => {
-    e.preventDefault()
+  useEffect(() => {
+    fetch('https://fokty-backend.herokuapp.com/recipes')
+    .then(res => res.json())
+    .then(setRecipes)
+  }, [issueRequest])
 
-    this.setState({ loading: true })
-    fetch("/.netlify/functions/" + api)
-      .then(response => response.json())
-      .then(json => this.setState({ loading: false, msg: json.msg }))
-  }
+  const searchList = recipes.filter((recipe) => {
+   return recipe.title.toLowerCase().includes(search.toLowerCase())
+  })
 
-  render() {
-    const { loading, msg } = this.state
+  function handleFavoriteButton(recipe){
+        fetch(`https://fokty-backend.herokuapp.com/recipes/${recipe.id}`,{
+            method: "PATCH",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({liked: !recipe.liked})
+        })
+            .then( setIssueRequest(!issueRequest))
+    }
 
-    return (
-      <p>
-        <button onClick={this.handleClick("hello")}>{loading ? "Loading..." : "Call Lambda"}</button>
-        <button onClick={this.handleClick("async-dadjoke")}>{loading ? "Loading..." : "Call Async Lambda"}</button>
-        <br />
-        <span>{msg}</span>
-      </p>
-    )
-  }
+  return (
+    <div className="App">
+      <Navbar />
+      <Switch>
+      <Route path='/recipes/:id'>
+        <RecipeDetails recipes={searchList}/>
+      </Route> 
+      <Route exact path='/recipes'>
+        <Recipes recipes={searchList} search={search} setSearch={setSearch} handleFavoriteButton={handleFavoriteButton}/>
+      </Route>
+      <Route path='/reviews/add'>
+        <AddReview />
+      </Route>
+      <Route path='/reviews'>
+        < Reviews /> 
+        </Route>
+      <Route exact path='/'>
+          <LandingPage />
+      </Route>
+      <Route path="*">
+        <h1>404 not found</h1>
+      </Route>
+      </Switch>
+    </div>
+  );
 }
 
-class App extends Component {
-  render() {
-    return (
-      <div className="App">
-        <header className="App-header">
-          <img src={logo} className="App-logo" alt="logo" />
-          <p>
-            Edit <code>src/App.js</code> and save to reload.
-          </p>
-          <LambdaDemo />
-        </header>
-      </div>
-    )
-  }
-}
-
-export default App
+export default App;
